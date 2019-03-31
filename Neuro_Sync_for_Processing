@@ -1,0 +1,303 @@
+import netP5.*;
+import oscP5.*;
+OscP5 oscP5;
+NetAddress myRemoteLocation;
+float X1pos = 0;
+float Y1pos = 0;
+float X2pos = 0;
+float Y2pos = 0;
+float Sync = 0;
+String Sync_str ="";
+
+// количество точек в круге
+int DOTSCOUNT   = 350;
+
+// количество кругов
+int CIRCLECOUNT = 2;
+
+// инициируем массив dots
+Particle[] dots = new Particle[DOTSCOUNT * CIRCLECOUNT];
+
+//разрешение экрана x
+//int res_x = 2880;
+
+//разрешение экрана y
+//int res_y = 1800;
+
+// радиус круга
+//float radius = displayWidth/10;
+float radius = 200;
+
+
+
+float thickness = radius/4;
+float velMin = 0.001;
+float velMax = 0.005;
+float distance = radius/6;
+
+void setup() {
+  
+  // сетап кругов
+  oscP5 = new OscP5(this,15000);
+  oscP5.plug(this, "changeX1", "/x1Pos");
+  oscP5.plug(this, "changeY1", "/y1Pos");
+  oscP5.plug(this, "changeX2", "/x2Pos");
+  oscP5.plug(this, "changeY2", "/y2Pos");
+  oscP5.plug(this, "changeSync", "/Sync");
+  fullScreen(P2D);
+  //frameRate(60);
+  smooth(2);
+  colorMode(HSB, 1);
+  initDots();
+
+ 
+ //сетап дерева
+ 
+ 
+  
+  background(#000000);
+  //size(1400, 900);
+  stroke(#c80000);
+  //smooth();
+  num = 5; //Number of branches
+  count = 0;
+  paths = new pathfinder[num];
+  for(int i = 0; i < num; i++){
+    paths[i] = new pathfinder();
+    //println(i);
+  }
+}
+ 
+
+
+// заполнеяем массив dots
+void initDots() {
+  for (int i = 0; i < DOTSCOUNT * CIRCLECOUNT; i++) {
+    float r = radius + (random(thickness) - thickness/2);
+    float v = random(velMin, velMax);
+    if (random(1) > .5) v *= -1;
+    dots[i] = new Particle(r, v);
+  }
+}
+
+// рисуем круги через функцию drawCircle 
+void draw() {
+ 
+ //drawCircle(width/2-X1pos, height/2 + Y1pos, 0);
+ //drawCircle(width/2+X2pos, height/2 - Y2pos, 1);
+ 
+ // if (Sync == 1){
+    
+ if (Sync < 1.95) {
+    background(#000000);
+    drawCircle(width/2-X1pos, height/2 + Y1pos, 0);
+    drawCircle(width/2+X2pos, height/2 - Y2pos, 1);
+   // дебагер
+   /* fill(#ffffff);   
+   Sync_str=str(Sync);
+    text(Sync_str,10,100);
+    println(Sync);
+    */
+  } else if ((1.95 < Sync) && (Sync < 2)){
+  background(#000000);
+ count = 0;
+  paths = new pathfinder[num];
+  for(int i = 0; i < num; i++) paths[i] = new pathfinder();}
+  else if (Sync == 2) {
+ drawTree();
+  }
+}
+
+// вводим функцию drawCircle
+void drawCircle(float posX, float posY, int circleNum) {
+  pushMatrix();
+  translate(posX, posY);
+  ellipse(0,0,radius*2,radius*2);
+ // ellipse(0,0,radius*2/(width-posX),radius*2/(width-posX));
+  // поворачиваем точки
+  for (int i = DOTSCOUNT*circleNum; i < DOTSCOUNT*(circleNum+1); i++) {
+    dots[i].update();
+    //dots[i].draw();
+  }
+  // рисуем красивые треугольники
+  for (int i = DOTSCOUNT*circleNum; i < DOTSCOUNT*(circleNum+1); i++) {
+    for (int j = i + 1; j < DOTSCOUNT*(circleNum+1); j++) {
+      float d = dist(dots[i].pos.x, dots[i].pos.y, dots[j].pos.x, dots[j].pos.y);
+      if (d < distance && i != j) {
+        //strokeWeight(0.5);
+        //stroke(#FFFFFF);
+        //line (dots[i].pos.x, dots[i].pos.y, dots[j].pos.x, dots[j].pos.y);
+        for (int k = j + 1; k < DOTSCOUNT*(circleNum+1); k++) {
+          float d1 = dist(dots[j].pos.x, dots[j].pos.y, dots[k].pos.x, dots[k].pos.y);
+          float d2 = dist(dots[i].pos.x, dots[i].pos.y, dots[k].pos.x, dots[k].pos.y);
+          if (d1 < distance && d2 < distance) {
+            noStroke();
+            fill(dots[i].rgb, 0.1);
+            beginShape(TRIANGLES);
+            vertex(dots[i].pos.x, dots[i].pos.y);
+            vertex(dots[j].pos.x, dots[j].pos.y);
+            vertex(dots[k].pos.x, dots[k].pos.y);
+            endShape();
+          }
+        }
+      }
+    }
+  }
+  popMatrix();
+}
+
+class Particle {
+  float radius, vel, angle;
+  PVector pos = new PVector();
+  color rgb;
+  
+  Particle(float r, float v) {
+    radius = r;
+    vel = v;
+    angle = random(TWO_PI);
+    //rgb = color(random(1), 1, 1);
+    if (random(1) > 0.5) rgb = lerpColor(#FF0051, #FF0001, random(1));
+    else                 rgb = lerpColor(#FF0000, #FF9100, random(1));
+  }
+  
+  void update() {
+    angle += vel;
+    pos.x = cos(angle) * radius;
+    pos.y = sin(angle) * radius;
+  }
+  
+  void draw() {
+    stroke(#FFFFFF);
+    strokeWeight(2);
+    point(pos.x, pos.y);
+  } 
+}
+ void changeX1(float f) {
+  X1pos = f;
+}
+
+  void changeY1(float f) {
+  Y1pos = f;
+}
+ void changeX2(float f) {
+  X2pos = f;
+}
+
+  void changeY2(float f) {
+  Y2pos = f;
+}
+
+  void changeSync(float f) {
+  Sync = f;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* OpenProcessing Tweak of *@*http://www.openprocessing.org/sketch/144159*@* */
+/* !do not delete the line above, required for linking your tweak if you upload again */
+class pathfinder {
+  PVector lastLocation;
+  PVector location;
+  PVector velocity;
+  float diameter;
+  boolean isFinished;
+  pathfinder() {
+    location = new PVector(width/2, height/1.25);
+    lastLocation = new PVector(location.x, location.y);
+    velocity = new PVector(0, -10);
+    diameter = random(15, 15);
+    isFinished = false;
+  }
+  pathfinder(pathfinder parent) {
+    location = parent.location.get();
+    lastLocation = parent.lastLocation.get();
+    velocity = parent.velocity.get();
+    diameter = parent.diameter * 0.62; // New branch
+    isFinished = parent.isFinished;
+    parent.diameter = diameter;
+  }
+  void update() {
+    
+    /*Do it slowly, when we have first leaves
+    if(diameter < 0.5){
+     frameRate(7);
+    }*/
+    //if(location.x > -10 & location.x < width + 10 & location.y > -10 & location.y < height + 10) {
+      lastLocation.set(location.x, location.y);
+      if (diameter > 0.2) {
+        //count ++;
+        PVector bump = new PVector(random(-1, 1), random(-1, 1));
+        velocity.normalize();
+        bump.mult(0.2);
+        velocity.mult(0.9);
+        velocity.add(bump);
+        velocity.mult(random(4, 10));
+        location.add(velocity);
+        if (random(0, 1) < 0.2) { // control length (branches)
+          paths = (pathfinder[]) append(paths, new pathfinder(this));
+        }
+      } else {
+        if(!isFinished) {
+          isFinished = true;
+          noStroke();
+          fill(#f0e696);
+          ellipse(location.x, location.y, 10, 10);
+          stroke(#c80000);
+        }
+      }
+    //}
+  }
+}
+pathfinder[] paths;
+int num;
+static int count;
+
+
+void drawTree() {
+//  println(count);
+//  println(paths.length);
+ellipseMode(CENTER);
+
+  for (int i = 0; i < paths.length; i++) {
+    PVector loc = paths[i].location;
+    PVector lastLoc = paths[i].lastLocation;
+    strokeWeight(paths[i].diameter);
+    line(lastLoc.x, lastLoc.y, loc.x, loc.y);
+    paths[i].update();
+  }
+}
+
+
+void mousePressed() {
+  background(#000000);
+  count = 0;
+  paths = new pathfinder[num];
+  for(int i = 0; i < num; i++) paths[i] = new pathfinder();
+
+}
